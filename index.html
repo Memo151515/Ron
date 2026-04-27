@@ -1,0 +1,175 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ron B-Bot AI</title>
+    <style>
+        body {
+            background-color: #000;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            margin: 0;
+            overflow: hidden;
+            font-family: 'Courier New', monospace;
+        }
+
+        /* Ron'un Gövdesi (Opsiyonel Beyazlık) */
+        .ron-body {
+            width: 350px;
+            height: 500px;
+            background: radial-gradient(circle at center, #222, #000);
+            border-radius: 150px 150px 50px 50px;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            position: relative;
+            border: 2px solid #111;
+        }
+
+        /* Gözler */
+        .eyes {
+            display: flex;
+            gap: 70px;
+            margin-bottom: 40px;
+        }
+
+        .eye {
+            width: 35px;
+            height: 55px;
+            background-color: #fff;
+            border-radius: 8px; /* Pikselli durması için az kavis */
+            box-shadow: 0 0 15px #fff;
+            transition: all 0.1s;
+        }
+
+        /* Ron'un pikselli ağzı */
+        .mouth {
+            width: 80px;
+            height: 15px;
+            background-color: #fff;
+            border-radius: 4px;
+            box-shadow: 0 0 15px #fff;
+            transition: all 0.1s;
+        }
+
+        /* Göz Kırpma Animasyonu */
+        @keyframes blink {
+            0%, 90%, 100% { transform: scaleY(1); }
+            95% { transform: scaleY(0.1); }
+        }
+
+        .blinking {
+            animation: blink 0.2s ease-in-out;
+        }
+
+        /* Konuşma Animasyonu */
+        .talking {
+            animation: speak 0.15s infinite alternate;
+        }
+
+        @keyframes speak {
+            from { height: 10px; width: 80px; transform: scaleX(1); }
+            to { height: 35px; width: 95px; transform: scaleX(1.1); }
+        }
+
+        #info {
+            position: absolute;
+            bottom: 30px;
+            color: #555;
+            font-size: 14px;
+            text-align: center;
+            width: 100%;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="ron-body" onclick="ronDinle()">
+        <div class="eyes">
+            <div id="eye-l" class="eye"></div>
+            <div id="eye-r" class="eye"></div>
+        </div>
+        <div id="mouth" class="mouth"></div>
+        <div id="info">Dokun ve Sor: "Ron, hava nasıl?"</div>
+    </div>
+
+    <script>
+        const mouth = document.getElementById('mouth');
+        const eyeL = document.getElementById('eye-l');
+        const eyeR = document.getElementById('eye-r');
+        const info = document.getElementById('info');
+
+        // Ses Tanıma Ayarları
+        const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+        const recognition = new SpeechRecognition();
+        recognition.lang = 'tr-TR';
+
+        // Ses Sentezi (Ron'un Sesi)
+        const synth = window.speechSynthesis;
+
+        // Rastgele Göz Kırpma
+        setInterval(() => {
+            eyeL.classList.add('blinking');
+            eyeR.classList.add('blinking');
+            setTimeout(() => {
+                eyeL.classList.remove('blinking');
+                eyeR.classList.remove('blinking');
+            }, 200);
+        }, 4000);
+
+        function ronDinle() {
+            try {
+                recognition.start();
+                info.innerText = "Dinliyorum...";
+                info.style.color = "#fff";
+            } catch (e) { console.log("Zaten dinliyor"); }
+        }
+
+        recognition.onresult = (event) => {
+            const input = event.results[0][0].transcript.toLowerCase();
+            info.innerText = "Anladım: " + input;
+            
+            // Google Araması Simülasyonu ve Yanıt
+            let cevap = "";
+            if(input.includes("selam") || input.includes("merhaba")) {
+                cevap = "Selam dostum! Ben Ron, senin en iyi arkadaşınım... ama biraz bozuğum.";
+            } else {
+                cevap = input + " konusunu Google'da arattım ve bence harika bir şey!";
+                // Gerçek Google araması açmak istersen:
+                // window.open(`https://www.google.com/search?q=${input}`, '_blank');
+            }
+            
+            ronKonus(cevap);
+        };
+
+        function ronKonus(metin) {
+            const utterance = new SpeechSynthesisUtterance(metin);
+            utterance.lang = 'tr-TR';
+            utterance.rate = 1.1; // Ron biraz hızlı ve heyecanlı konuşur
+            utterance.pitch = 1.2; // Sesini biraz daha robotik yap
+
+            utterance.onstart = () => {
+                mouth.classList.add('talking');
+                info.innerText = "Ron konuşuyor...";
+            };
+
+            utterance.onend = () => {
+                mouth.classList.remove('talking');
+                info.innerText = "Dokun ve tekrar sor!";
+                info.style.color = "#555";
+            };
+
+            synth.speak(utterance);
+        }
+
+        recognition.onerror = () => {
+            info.innerText = "Hata oluştu, tekrar dokun.";
+            mouth.classList.remove('talking');
+        }
+    </script>
+</body>
+</html>
