@@ -3,46 +3,37 @@ import requests
 
 app = Flask(__name__)
 
-# Ron'un Yüzü ve Arayüzü (HTML + JS)
+# Ron'un Yüzü (HTML + JS)
 HTML_TEMPLATE = """
 <!DOCTYPE html>
-<html>
+<html lang="tr">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Ron B-Bot AI</title>
     <style>
         body { background: #000; margin: 0; display: flex; justify-content: center; align-items: center; height: 100vh; overflow: hidden; cursor: pointer; }
-        .ron-face { text-align: center; }
-        .eye { width: 80px; height: 120px; background: #fff; border-radius: 12px; display: inline-block; margin: 30px; box-shadow: 0 0 40px #fff; transition: transform 0.1s; }
+        .eye { width: 80px; height: 120px; background: #fff; border-radius: 12px; display: inline-block; margin: 30px; box-shadow: 0 0 40px #fff; }
         .mouth { width: 180px; height: 20px; background: #fff; border-radius: 6px; margin: 0 auto; box-shadow: 0 0 25px #fff; }
         .talking { animation: speak 0.1s infinite alternate; }
         @keyframes speak { from { height: 20px; } to { height: 75px; border-radius: 30px; } }
         .blink { transform: scaleY(0.05); }
-        #status { position: fixed; bottom: 20px; color: #1a1a1a; font-family: monospace; }
     </style>
 </head>
 <body onclick="startRon()">
-    <div class="ron-face">
-        <div id="eyeL" class="eye"></div>
-        <div id="eyeR" class="eye"></div>
+    <div style="text-align: center;">
+        <div class="eye" id="eL"></div>
+        <div class="eye" id="eR"></div>
         <div id="mouth" class="mouth"></div>
     </div>
-    <div id="status">Ron Hazır - Dokun ve Konuş</div>
-
     <script>
         const recognition = new (window.SpeechRecognition || window.webkitSpeechRecognition)();
         recognition.lang = 'tr-TR';
-        const mouth = document.getElementById('mouth');
-
-        function startRon() {
-            try { recognition.start(); document.getElementById('status').innerText = "Dinliyorum..."; } catch(e) {}
-        }
+        
+        function startRon() { recognition.start(); }
 
         recognition.onresult = async (event) => {
             const query = event.results[0][0].transcript;
-            document.getElementById('status').innerText = "Araştırıyorum: " + query;
-            
             const res = await fetch('/api/ask', {
                 method: 'POST',
                 headers: {'Content-Type': 'application/json'},
@@ -55,21 +46,23 @@ HTML_TEMPLATE = """
         function speak(text) {
             const utter = new SpeechSynthesisUtterance(text);
             utter.lang = 'tr-TR';
-            utter.pitch = 0.8; // Erkek sesi (Kalınlaştırılmış)
-            utter.rate = 1.3;  // Ron Gevezeliği
-            
-            utter.onstart = () => mouth.classList.add('talking');
+            utter.pitch = 0.8; // Erkek sesi
+            utter.rate = 1.3;
+            utter.onstart = () => document.getElementById('mouth').classList.add('talking');
             utter.onend = () => {
-                mouth.classList.remove('talking');
-                document.getElementById('status').innerText = "Seni Dinliyorum...";
+                document.getElementById('mouth').classList.remove('talking');
                 recognition.start();
             };
             window.speechSynthesis.speak(utter);
         }
 
         setInterval(() => {
-            document.querySelectorAll('.eye').forEach(e => e.classList.add('blink'));
-            setTimeout(() => document.querySelectorAll('.eye').forEach(e => e.classList.remove('blink')), 150);
+            document.getElementById('eL').classList.add('blink');
+            document.getElementById('eR').classList.add('blink');
+            setTimeout(() => {
+                document.getElementById('eL').classList.remove('blink');
+                document.getElementById('eR').classList.remove('blink');
+            }, 150);
         }, 4000);
     </script>
 </body>
@@ -84,18 +77,15 @@ def home():
 def ask():
     data = request.json
     query = data.get("query", "").lower()
-    
-    # GERÇEK ARAŞTIRMA: Wikipedia API
     try:
-        wiki_res = requests.get(f"https://tr.wikipedia.org/api/rest_v1/page/summary/{query}", timeout=5)
-        wiki_data = wiki_res.json()
-        if "extract" in wiki_data:
-            return jsonify({"answer": wiki_data["extract"]})
+        # Wikipedia'dan veri çekme
+        r = requests.get(f"https://tr.wikipedia.org/api/rest_v1/page/summary/{query}", timeout=5)
+        if r.status_code == 200:
+            return jsonify({"answer": r.json().get("extract", "Bunu biliyorum ama anlatması uzun sürer!")})
     except:
         pass
-    
-    return jsonify({"answer": f"{query} hakkında çok gizli verilere ulaştım ama arkadaşlığımız daha önemli!"})
+    return jsonify({"answer": f"{query} hakkında internette çok garip şeyler var, tam Ron'luk bir durum!"})
 
-# Vercel için handler
-def handler(event, context):
-    return app(event, context)
+# BU SATIR ÖNEMLİ: Vercel'in Flask'ı görmesini sağlar
+if __name__ == "__main__":
+    app.run()
