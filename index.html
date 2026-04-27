@@ -3,63 +3,19 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Ron B-Bot (Film Sesi)</title>
+    <title>Ron B-Bot AI (Erkek Sesi)</title>
     <style>
-        body {
-            background-color: #000;
-            margin: 0;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            height: 100vh;
-            width: 100vw;
-            overflow: hidden;
-        }
-
-        .ron-face {
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            gap: 70px;
-        }
-
-        .eyes {
-            display: flex;
-            gap: 90px;
-        }
-
-        .eye {
-            width: 75px;
-            height: 110px;
-            background-color: #fff;
-            border-radius: 12px;
-            box-shadow: 0 0 40px rgba(255, 255, 255, 0.6);
-        }
-
-        .mouth {
-            width: 170px;
-            height: 18px;
-            background-color: #fff;
-            border-radius: 6px;
-            box-shadow: 0 0 25px rgba(255, 255, 255, 0.5);
-        }
-
-        /* Konuşma Animasyonu (Pikselli Bozulma) */
-        .talking {
-            animation: ronSpeak 0.08s infinite alternate;
-        }
-
-        @keyframes ronSpeak {
-            from { height: 18px; transform: scaleX(1); border-radius: 6px; }
-            to { height: 60px; transform: scaleX(1.1); border-radius: 25px; }
-        }
-
-        .blink { transform: scaleY(0.05); transition: 0.1s; }
-
-        #msg { position: absolute; bottom: 15px; color: #111; font-family: sans-serif; font-size: 10px; }
+        body { background-color: #000; margin: 0; display: flex; justify-content: center; align-items: center; height: 100vh; overflow: hidden; cursor: pointer; }
+        .ron-face { display: flex; flex-direction: column; align-items: center; gap: 60px; }
+        .eyes { display: flex; gap: 100px; }
+        .eye { width: 80px; height: 115px; background-color: #fff; border-radius: 12px; box-shadow: 0 0 35px #fff; }
+        .mouth { width: 170px; height: 15px; background-color: #fff; border-radius: 6px; box-shadow: 0 0 20px #fff; transition: 0.05s; }
+        .talking { animation: ronTalk 0.1s infinite alternate; }
+        @keyframes ronTalk { from { height: 15px; } to { height: 65px; border-radius: 25px; } }
+        .blink { transform: scaleY(0.05); }
     </style>
 </head>
-<body onclick="ronStart()">
+<body onclick="startRon()">
 
     <div class="ron-face">
         <div class="eyes">
@@ -68,82 +24,90 @@
         </div>
         <div id="mouth" class="mouth"></div>
     </div>
-    <div id="msg">Ron Başlatılıyor...</div>
 
     <script>
         const mouth = document.getElementById('mouth');
         const eyeL = document.getElementById('eyeL');
         const eyeR = document.getElementById('eyeR');
-        
-        const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-        const recognition = new SpeechRecognition();
-        recognition.lang = 'tr-TR';
-        recognition.continuous = false;
 
+        let ronMemory = {
+            "selam": "Selam en iyi arkadaşım! Ben Ron!",
+            "nasılsın": "Süperim! Arkadaşlık seviyem yüzde yüz!",
+            "absalom": "Absalom! Absalooom!"
+        };
+
+        const recognition = new (window.SpeechRecognition || window.webkitSpeechRecognition)();
+        recognition.lang = 'tr-TR';
         const synth = window.speechSynthesis;
         let active = false;
+        let lastQuestion = "";
+        let selectedVoice = null;
 
-        function ronStart() {
-            if(!active) {
-                active = true;
-                listen();
-            }
+        // Cihazdaki erkek sesini bulma
+        function setVoice() {
+            let voices = synth.getVoices();
+            // Türkçe ve tercihen erkek (Google Türkçe gibi) bir ses ara
+            selectedVoice = voices.find(v => v.lang.includes('tr') && (v.name.includes('Male') || v.name.includes('Erkek'))) 
+                            || voices.find(v => v.lang.includes('tr'));
+        }
+        if (speechSynthesis.onvoiceschanged !== undefined) {
+            speechSynthesis.onvoiceschanged = setVoice;
+        }
+
+        function startRon() {
+            if(!active) { active = true; setVoice(); listen(); }
         }
 
         function listen() {
             try { recognition.start(); } catch(e) {}
         }
 
-        // Rastgele Göz Kırpma
         setInterval(() => {
-            eyeL.classList.add('blink');
-            eyeR.classList.add('blink');
-            setTimeout(() => {
-                eyeL.classList.remove('blink');
-                eyeR.classList.remove('blink');
-            }, 150);
-        }, 3000);
+            eyeL.classList.add('blink'); eyeR.classList.add('blink');
+            setTimeout(() => { eyeL.classList.remove('blink'); eyeR.classList.remove('blink'); }, 150);
+        }, 3800);
 
         recognition.onresult = (event) => {
-            const text = event.results[0][0].transcript.toLowerCase();
-            handleRonAI(text);
-        };
-
-        recognition.onend = () => {
-            if(active && !synth.speaking) listen();
-        };
-
-        function handleRonAI(text) {
-            let response = "";
+            const input = event.results[0][0].transcript.toLowerCase();
             
-            if(text.includes("selam") || text.includes("ron")) {
-                response = "Selam! Ben senin en iyi arkadaşınım! Hadi oyun oynayalım!";
-            } else if(text.includes("nasılsın")) {
-                response = "Harikayım! Verilerim biraz karışık ama arkadaşlığımız mükemmel!";
-            } else if(text.includes("saat")) {
-                response = "Şu an tam arkadaşlık vakti! Absalom!";
-            } else {
-                response = text + " mi? Bu çok ilginç! Veritabanıma kaydediyorum!";
+            if (lastQuestion !== "") {
+                ronMemory[lastQuestion] = input;
+                lastQuestion = "";
+                speakRon("Tamam, bunu veritabanıma ekledim!");
+                return;
             }
-            
-            speakRon(response);
-        }
+
+            let found = false;
+            for (let key in ronMemory) {
+                if (input.includes(key)) {
+                    speakRon(ronMemory[key]);
+                    found = true;
+                    break;
+                }
+            }
+
+            if (!found) {
+                lastQuestion = input;
+                speakRon(input + " nedir? Lütfen bana açıkla!");
+            }
+        };
+
+        recognition.onend = () => { if(active && !synth.speaking) listen(); };
 
         function speakRon(text) {
             const utter = new SpeechSynthesisUtterance(text);
+            if (selectedVoice) utter.voice = selectedVoice;
             
-            // FİLMDEKİ SES AYARLARI (TÜRKÇE DUBLAJ TARAFI)
             utter.lang = 'tr-TR';
-            utter.pitch = 1.6; // Sesi oldukça tiz yapar (Ron'un sesi gibi)
-            utter.rate = 1.3;  // Hızlı ve heyecanlı konuşmasını sağlar
-            utter.volume = 1;
-
+            // ERKEK SESİ AYARLARI
+            utter.pitch = 0.9; // 1.0 altı sesi kalınlaştırır (Erkek tonu)
+            utter.rate = 1.2;  // Ron'un hızlı konuşma tarzı
+            
             utter.onstart = () => mouth.classList.add('talking');
             utter.onend = () => {
                 mouth.classList.remove('talking');
-                listen(); // Konuşma biter bitmez dinlemeye dön
+                setTimeout(listen, 400);
             };
-
             synth.speak(utter);
         }
     </script>
